@@ -60,6 +60,7 @@ The custom editor interface will appear in the Inspector (powered by CameraPathE
 + Set Number of Keyframes (e.g., 8).
 + Click "🟢 Generate Spherical Keyframes" to create a random spherical distribution.
 - **Playback the Path:**
++ Firstly, click play mode in Unity.
 + Click "▶️ Play" to animate the camera along the defined path.
 + Monitor the movement in the Scene View (gizmos) or Game View.
 - **Export Images:**
