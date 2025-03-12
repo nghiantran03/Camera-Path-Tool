@@ -44,7 +44,7 @@ The `CameraPathController` is a Unity script that facilitates the creation and m
 3. **Set Up in a Scene**
 In the Hierarchy, right-click and select "Create Empty" to create a new GameObject.
 Select the GameObject, click "Add Component" in the Inspector, and search for "CameraPathController".
-Add a Camera component if not already present, then add tag named MainCamera.
+Add a Camera component if not already present, then add tag named MainCamera for that added Camera.
 ## Usage
 Select the GameObject with CameraPathController in the Hierarchy.
 The custom editor interface will appear in the Inspector (powered by CameraPathEditor.cs).
