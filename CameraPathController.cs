@@ -10,9 +10,9 @@ public class CameraKeyframe
     public float time;
     public Vector3 position;
     public Quaternion rotation;
-    public float fov; // Chỉ dùng trong runtime, không lưu trong trajectory
-    public float near; // Chỉ dùng trong runtime, không lưu trong trajectory
-    public float far;  // Chỉ dùng trong runtime, không lưu trong trajectory
+    public float fov;
+    public float near;
+    public float far;
 }
 
 [System.Serializable]
@@ -32,8 +32,8 @@ public class CameraTrajectoryData
 public class CameraTrajectoryKeyframe
 {
     public float time;
-    public float[] position; // Thay Vector3 bằng mảng float[3]
-    public float[] rotation; // Thay Quaternion bằng mảng float[4] (x, y, z, w)
+    public float[] position;
+    public float[] rotation;
 }
 
 [System.Serializable]
@@ -46,9 +46,9 @@ public class CameraPathData
 public class CameraKeyframeOption2
 {
     public float time;
-    public float[] position; // Thay Vector3 bằng mảng float[3]
-    public float[] lookAt;   // Thay Vector3 bằng mảng float[3]
-    public float[] up;       // Thay Vector3 bằng mảng float[3]
+    public float[] position;
+    public float[] lookAt;
+    public float[] up;
 }
 
 [System.Serializable]
