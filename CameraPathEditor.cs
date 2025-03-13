@@ -42,7 +42,7 @@ public class CameraPathEditor : Editor
                 EditorUtility.SetDirty(controller);
             }
 
-            GUILayout.Label("Danh sách Keyframes:");
+            GUILayout.Label("Keyframes list:");
             for (int i = 0; i < controller.keyframes.Count; i++)
             {
                 EditorGUILayout.BeginHorizontal();
@@ -89,14 +89,26 @@ public class CameraPathEditor : Editor
         jsonFilePath = EditorGUILayout.TextField("JSON Path", jsonFilePath);
 
         EditorGUILayout.BeginHorizontal();
-        if (GUILayout.Button("📂 Load from JSON", buttonStyle))
+        if (GUILayout.Button("📂 Load From JSON rotation", buttonStyle))
         {
             controller.LoadFromJSON(jsonFilePath);
             EditorUtility.SetDirty(controller);
         }
-        if (GUILayout.Button("💾 Export to JSON", buttonStyle))
+        if (GUILayout.Button("📂 Load From JSON LookAt+Up", buttonStyle))
+        {
+            controller.LoadFromJSON(jsonFilePath, true);
+            EditorUtility.SetDirty(controller);
+        }
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("💾 Export JSON rotation", buttonStyle))
         {
             controller.ExportToJSON(jsonFilePath);
+        }
+        if (GUILayout.Button("💾 Export JSON LookAt+Up", buttonStyle))
+        {
+            controller.ExportToJSON(jsonFilePath, true);
         }
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.EndVertical();
@@ -113,11 +125,36 @@ public class CameraPathEditor : Editor
             EditorUtility.SetDirty(controller);
             SceneView.RepaintAll();
         }
+        if (GUILayout.Button("📂 Load From JSON LookAt+Up", buttonStyle))
+        {
+            controller.LoadAndDrawAllPathsFromFolder(true);
+            EditorUtility.SetDirty(controller);
+            SceneView.RepaintAll();
+        }
         if (GUILayout.Button("🗑️ Clear All Paths", buttonStyle))
         {
             controller.ClearAllMultiPaths();
             EditorUtility.SetDirty(controller);
             SceneView.RepaintAll();
+        }
+        EditorGUILayout.EndHorizontal();
+        EditorGUILayout.EndVertical();
+
+        // Camera Path Export
+        GUILayout.Space(10);
+        EditorGUILayout.BeginVertical("box");
+        GUILayout.Label("📹 Camera Path Export", EditorStyles.boldLabel);
+        controller.fullPathJsonPath = EditorGUILayout.TextField("Full Path JSON Path", controller.fullPathJsonPath);
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("💾 Export Full Camera Path Rotation", buttonStyle))
+        {
+            controller.ExportFullCameraPath();
+            EditorUtility.SetDirty(controller);
+        }
+        if (GUILayout.Button("💾 Export Full Camera Path LookAt+Up", buttonStyle))
+        {
+            controller.ExportFullCameraPath(true);
+            EditorUtility.SetDirty(controller);
         }
         EditorGUILayout.EndHorizontal();
         EditorGUILayout.EndVertical();
