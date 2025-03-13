@@ -65,7 +65,7 @@ The custom editor interface will appear in the Inspector (powered by CameraPathE
 + Monitor the movement in the Scene View (gizmos) or Game View.
 - **Export Images:**
 + Configure Export Folder (e.g., ExportedFrames) and Frame Prefix (e.g., frame_) in "Frame Export Options".
-+ Click "📷 Export Keyframe Images" to save PNGs to Assets/ExportedFrames.
++ Firstly turn on the Play Mode in Unity, then click "📷 Export Keyframe Images" to save PNGs to Assets/ExportedFrames.
 - **Save or Load Paths:**
 + Set JSON Path (e.g., Assets/CameraPathData.json).
 + Click "💾 Export to JSON" to save or "📂 Load from JSON" to load a path.
