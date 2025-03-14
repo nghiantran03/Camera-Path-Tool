@@ -96,6 +96,8 @@ public class CameraPathController : MonoBehaviour
     [Header("Multi-Path Visualization")]
     [SerializeField] private List<CameraPathData> multiCameraPaths = new List<CameraPathData>();
     [SerializeField] public string jsonFolderPath = "Assets/JSONPaths";
+    public bool showMultiPaths = true; 
+    public bool showMultiPathLinesOnly = false; 
 
     [Header("Camera Path Export")]
     [SerializeField] public string fullPathJsonPath = "Assets/FullCameraPath.json";
@@ -189,7 +191,8 @@ public class CameraPathController : MonoBehaviour
         Debug.Log($"Moved camera to keyframe {keyframeIndex} at time {targetKeyframe.time:F2}s");
     }
 
-    public void GenerateSphericalKeyframes(Vector3 center, float radius, int numKeyframes)
+    [ContextMenu("Generate Spherical Keyframes")]
+    public void GenerateSphericalKeyframes()
     {
         if (targetCamera == null)
         {
@@ -201,13 +204,13 @@ public class CameraPathController : MonoBehaviour
             }
         }
 
-        if (numKeyframes < 1)
+        if (fps < 1)
         {
             Debug.LogWarning("Number of keyframes must be greater than 0!");
             return;
         }
 
-        if (radius <= 0)
+        if (sphereRadius <= 0)
         {
             Debug.LogWarning("Sphere radius must be greater than 0!");
             return;
@@ -215,8 +218,8 @@ public class CameraPathController : MonoBehaviour
 
         keyframes.Clear();
 
-        float timeStep = totalDuration / (numKeyframes > 1 ? numKeyframes - 1 : 1);
-        for (int i = 0; i < numKeyframes; i++)
+        float timeStep = totalDuration / (fps > 1 ? fps - 1 : 1);
+        for (int i = 0; i < fps; i++)
         {
             float u = Random.value;
             float v = Random.value;
@@ -224,12 +227,12 @@ public class CameraPathController : MonoBehaviour
             float theta = 2f * Mathf.PI * u;
             float phi = Mathf.Acos(2f * v - 1f);
 
-            float x = radius * Mathf.Sin(phi) * Mathf.Cos(theta);
-            float y = radius * Mathf.Cos(phi);
-            float z = radius * Mathf.Sin(phi) * Mathf.Sin(theta);
-            Vector3 position = center + new Vector3(x, y, z);
+            float x = sphereRadius * Mathf.Sin(phi) * Mathf.Cos(theta);
+            float y = sphereRadius * Mathf.Cos(phi);
+            float z = sphereRadius * Mathf.Sin(phi) * Mathf.Sin(theta);
+            Vector3 position = sphereCenter + new Vector3(x, y, z);
 
-            Quaternion rotation = Quaternion.LookRotation(center - position, Vector3.up);
+            Quaternion rotation = Quaternion.LookRotation(sphereCenter - position, Vector3.up);
 
             CameraKeyframe newKeyframe = new CameraKeyframe
             {
@@ -244,11 +247,9 @@ public class CameraPathController : MonoBehaviour
             Debug.Log($"Added keyframe {i} on sphere at ({position.x:F2}, {position.y:F2}, {position.z:F2})");
         }
 
-        totalDuration = numKeyframes > 1 ? keyframes[numKeyframes - 1].time : 0f;
-        sphereCenter = center;
-        sphereRadius = radius;
+        totalDuration = fps > 1 ? keyframes[fps - 1].time : 0f;
         showSphere = true;
-        Debug.Log($"Generated {numKeyframes} random keyframes on sphere, center: {center}, radius: {radius}");
+        Debug.Log($"Generated {fps} random keyframes on sphere, center: {sphereCenter}, radius: {sphereRadius}");
     }
 
     public void AddKeyframe()
@@ -473,6 +474,7 @@ public class CameraPathController : MonoBehaviour
         isPlaying = true;
     }
 
+    [ContextMenu("Load All Paths")]
     public void LoadAndDrawAllPathsFromFolder(bool useLookAtUp = false)
     {
         multiCameraPaths.Clear();
@@ -484,92 +486,168 @@ public class CameraPathController : MonoBehaviour
         }
 
         string[] jsonFiles = Directory.GetFiles(jsonFolderPath, "*.json");
+        if (jsonFiles.Length == 0)
+        {
+            Debug.LogWarning($"No JSON files found in folder: {jsonFolderPath}");
+            return;
+        }
+
         foreach (string filePath in jsonFiles)
         {
-            string json = File.ReadAllText(filePath);
-            if (useLookAtUp)
+            try
             {
-                CameraPathDataOption2 dataOption2 = JsonUtility.FromJson<CameraPathDataOption2>(json);
-                List<CameraKeyframe> loadedKeyframes = new List<CameraKeyframe>();
-                foreach (var kf in dataOption2.camera.trajectory)
+                string json = File.ReadAllText(filePath);
+                if (useLookAtUp)
                 {
-                    Vector3 realPosition = new Vector3(kf.position[0], kf.position[1], kf.position[2]) * dataOption2.camera.scale;
-                    Vector3 lookAt = new Vector3(kf.lookAt[0], kf.lookAt[1], kf.lookAt[2]);
-                    Vector3 up = new Vector3(kf.up[0], kf.up[1], kf.up[2]);
-                    loadedKeyframes.Add(new CameraKeyframe
+                    CameraPathDataOption2 dataOption2 = JsonUtility.FromJson<CameraPathDataOption2>(json);
+                    if (dataOption2?.camera?.trajectory == null || dataOption2.camera.trajectory.Count < 2)
                     {
-                        time = kf.time,
-                        position = realPosition,
-                        rotation = Quaternion.LookRotation(lookAt, up),
-                        fov = dataOption2.camera.fovy,
-                        near = dataOption2.camera.near,
-                        far = dataOption2.camera.far
-                    });
-                }
-                multiCameraPaths.Add(new CameraPathData
-                {
-                    camera = new CameraTrajectoryData
-                    {
-                        trajectory = new List<CameraTrajectoryKeyframe>(),
-                        totalDuration = dataOption2.camera.totalDuration,
-                        fps = dataOption2.camera.fps,
-                        scale = dataOption2.camera.scale
+                        Debug.LogWarning($"Invalid or empty trajectory in file: {Path.GetFileName(filePath)}");
+                        continue;
                     }
-                });
-                foreach (var kf in loadedKeyframes)
-                {
-                    multiCameraPaths[multiCameraPaths.Count - 1].camera.trajectory.Add(new CameraTrajectoryKeyframe
+
+                    List<CameraKeyframe> loadedKeyframes = new List<CameraKeyframe>();
+                    foreach (var kf in dataOption2.camera.trajectory)
                     {
-                        time = kf.time,
-                        position = new float[] { kf.position.x, kf.position.y, kf.position.z },
-                        rotation = new float[] { kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.w }
-                    });
+                        Vector3 position = new Vector3(kf.position[0], kf.position[1], kf.position[2]) * dataOption2.camera.scale;
+                        Vector3 lookAt = new Vector3(kf.lookAt[0], kf.lookAt[1], kf.lookAt[2]);
+                        Vector3 up = new Vector3(kf.up[0], kf.up[1], kf.up[2]);
+
+                        if (lookAt.magnitude < 0.0001f)
+                        {
+                            Debug.LogWarning($"Invalid lookAt vector at time {kf.time} in file: {Path.GetFileName(filePath)}");
+                            continue;
+                        }
+                        lookAt.Normalize();
+
+                        if (up.magnitude < 0.0001f)
+                        {
+                            Debug.LogWarning($"Invalid up vector at time {kf.time} in file: {Path.GetFileName(filePath)}");
+                            up = Vector3.up;
+                        }
+                        up.Normalize();
+
+                        Quaternion rotation;
+                        try
+                        {
+                            rotation = Quaternion.LookRotation(lookAt, up);
+                        }
+                        catch (System.Exception e)
+                        {
+                            Debug.LogWarning($"Failed to create rotation at time {kf.time} in file: {Path.GetFileName(filePath)}. Error: {e.Message}");
+                            continue;
+                        }
+
+                        loadedKeyframes.Add(new CameraKeyframe
+                        {
+                            time = kf.time,
+                            position = position,
+                            rotation = rotation,
+                            fov = dataOption2.camera.fovy,
+                            near = dataOption2.camera.near,
+                            far = dataOption2.camera.far
+                        });
+                    }
+
+                    if (loadedKeyframes.Count < 2)
+                    {
+                        Debug.LogWarning($"Not enough keyframes (< 2) in file: {Path.GetFileName(filePath)}");
+                        continue;
+                    }
+
+                    CameraPathData pathData = new CameraPathData
+                    {
+                        camera = new CameraTrajectoryData
+                        {
+                            fovy = dataOption2.camera.fovy,
+                            aspect = dataOption2.camera.aspect,
+                            near = dataOption2.camera.near,
+                            far = dataOption2.camera.far,
+                            totalDuration = dataOption2.camera.totalDuration,
+                            fps = dataOption2.camera.fps,
+                            scale = dataOption2.camera.scale,
+                            trajectory = new List<CameraTrajectoryKeyframe>()
+                        }
+                    };
+
+                    foreach (var kf in loadedKeyframes)
+                    {
+                        pathData.camera.trajectory.Add(new CameraTrajectoryKeyframe
+                        {
+                            time = kf.time,
+                            position = new float[] { kf.position.x, kf.position.y, kf.position.z },
+                            rotation = new float[] { kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.w }
+                        });
+                    }
+
+                    multiCameraPaths.Add(pathData);
+                    Debug.Log($"Loaded camera path from {Path.GetFileName(filePath)} with {pathData.camera.trajectory.Count} keyframes (LookAt+Up)");
+                }
+                else
+                {
+                    CameraPathData data = JsonUtility.FromJson<CameraPathData>(json);
+                    if (data?.camera?.trajectory == null || data.camera.trajectory.Count < 2)
+                    {
+                        Debug.LogWarning($"Invalid or empty trajectory in file: {Path.GetFileName(filePath)}");
+                        continue;
+                    }
+
+                    float loadedScale = data.camera.scale;
+                    List<CameraKeyframe> loadedKeyframes = new List<CameraKeyframe>();
+                    foreach (var kf in data.camera.trajectory)
+                    {
+                        Vector3 position = new Vector3(kf.position[0], kf.position[1], kf.position[2]) * loadedScale;
+                        Quaternion rotation = new Quaternion(kf.rotation[0], kf.rotation[1], kf.rotation[2], kf.rotation[3]);
+                        loadedKeyframes.Add(new CameraKeyframe
+                        {
+                            time = kf.time,
+                            position = position,
+                            rotation = rotation,
+                            fov = data.camera.fovy,
+                            near = data.camera.near,
+                            far = data.camera.far
+                        });
+                    }
+
+                    CameraPathData pathData = new CameraPathData
+                    {
+                        camera = new CameraTrajectoryData
+                        {
+                            fovy = data.camera.fovy,
+                            aspect = data.camera.aspect,
+                            near = data.camera.near,
+                            far = data.camera.far,
+                            totalDuration = data.camera.totalDuration,
+                            fps = data.camera.fps,
+                            scale = data.camera.scale,
+                            trajectory = new List<CameraTrajectoryKeyframe>()
+                        }
+                    };
+
+                    foreach (var kf in loadedKeyframes)
+                    {
+                        pathData.camera.trajectory.Add(new CameraTrajectoryKeyframe
+                        {
+                            time = kf.time,
+                            position = new float[] { kf.position.x, kf.position.y, kf.position.z },
+                            rotation = new float[] { kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.w }
+                        });
+                    }
+
+                    multiCameraPaths.Add(pathData);
+                    Debug.Log($"Loaded camera path from {Path.GetFileName(filePath)} with {pathData.camera.trajectory.Count} keyframes (rotation)");
                 }
             }
-            else
+            catch (System.Exception e)
             {
-                CameraPathData data = JsonUtility.FromJson<CameraPathData>(json);
-                float loadedScale = data.camera.scale;
-                List<CameraKeyframe> loadedKeyframes = new List<CameraKeyframe>();
-                foreach (var kf in data.camera.trajectory)
-                {
-                    Vector3 position = new Vector3(kf.position[0], kf.position[1], kf.position[2]) * loadedScale;
-                    Quaternion rotation = new Quaternion(kf.rotation[0], kf.rotation[1], kf.rotation[2], kf.rotation[3]);
-                    loadedKeyframes.Add(new CameraKeyframe
-                    {
-                        time = kf.time,
-                        position = position,
-                        rotation = rotation,
-                        fov = data.camera.fovy,
-                        near = data.camera.near,
-                        far = data.camera.far
-                    });
-                }
-                multiCameraPaths.Add(new CameraPathData
-                {
-                    camera = new CameraTrajectoryData
-                    {
-                        trajectory = new List<CameraTrajectoryKeyframe>(),
-                        totalDuration = data.camera.totalDuration,
-                        fps = data.camera.fps,
-                        scale = data.camera.scale
-                    }
-                });
-                foreach (var kf in loadedKeyframes)
-                {
-                    multiCameraPaths[multiCameraPaths.Count - 1].camera.trajectory.Add(new CameraTrajectoryKeyframe
-                    {
-                        time = kf.time,
-                        position = new float[] { kf.position.x, kf.position.y, kf.position.z },
-                        rotation = new float[] { kf.rotation.x, kf.rotation.y, kf.rotation.z, kf.rotation.w }
-                    });
-                }
+                Debug.LogError($"Error loading JSON file {Path.GetFileName(filePath)}: {e.Message}");
             }
-            Debug.Log($"Loaded camera path from {Path.GetFileName(filePath)} with {multiCameraPaths[multiCameraPaths.Count - 1].camera.trajectory.Count} keyframes" + (useLookAtUp ? " (LookAt+Up)" : " (rotation)"));
         }
 
         if (multiCameraPaths.Count == 0)
-            Debug.LogWarning("No valid JSON files found in the folder.");
+        {
+            Debug.LogWarning("No valid JSON files were loaded into multiCameraPaths.");
+        }
     }
 
     public void ClearAllMultiPaths()
@@ -709,15 +787,16 @@ public class CameraPathController : MonoBehaviour
             Gizmos.DrawSphere(sphereCenter, sphereRadius);
         }
 
-        if (!showPath || keyframes.Count < 2) return;
-
-        Gizmos.color = pathColor;
-        for (int i = 0; i < keyframes.Count - 1; i++)
+        if (showPath && keyframes.Count >= 2)
         {
-            Gizmos.DrawLine(keyframes[i].position, keyframes[i + 1].position);
+            Gizmos.color = pathColor;
+            for (int i = 0; i < keyframes.Count - 1; i++)
+            {
+                Gizmos.DrawLine(keyframes[i].position, keyframes[i + 1].position);
+            }
         }
 
-        if (showKeyframes)
+        if (showKeyframes && keyframes.Count > 0)
         {
             Gizmos.color = keyframeColor;
             for (int i = 0; i < keyframes.Count; i++)
@@ -727,7 +806,7 @@ public class CameraPathController : MonoBehaviour
             }
         }
 
-        if (multiCameraPaths.Count > 0)
+        if (showMultiPaths && multiCameraPaths.Count > 0)
         {
             for (int pathIndex = 0; pathIndex < multiCameraPaths.Count; pathIndex++)
             {
@@ -742,11 +821,14 @@ public class CameraPathController : MonoBehaviour
                     Gizmos.DrawLine(pos1, pos2);
                 }
 
-                Gizmos.color = Gizmos.color * 0.8f;
-                for (int i = 0; i < trajectory.Count; i++)
+                if (!showMultiPathLinesOnly)
                 {
-                    Vector3 pos = new Vector3(trajectory[i].position[0], trajectory[i].position[1], trajectory[i].position[2]);
-                    Gizmos.DrawSphere(pos, 0.08f);
+                    Gizmos.color = Gizmos.color * 0.8f;
+                    for (int i = 0; i < trajectory.Count; i++)
+                    {
+                        Vector3 pos = new Vector3(trajectory[i].position[0], trajectory[i].position[1], trajectory[i].position[2]);
+                        Gizmos.DrawSphere(pos, 0.08f);
+                    }
                 }
             }
         }
@@ -759,6 +841,7 @@ public class CameraPathController : MonoBehaviour
                $"FPS: {fps}\n" +
                $"Scale: {scale}\n" +
                $"Playing: {isPlaying}\n" +
-               $"Current Time: {timer:F2}s";
+               $"Current Time: {timer:F2}s\n" +
+               $"MultiCameraPaths: {multiCameraPaths.Count}";
     }
 }
