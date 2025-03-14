@@ -76,7 +76,10 @@ public class CameraPathEditor : Editor
 
         if (GUILayout.Button("🟢 Generate Spherical Keyframes", buttonStyle))
         {
-            controller.GenerateSphericalKeyframes(lastSphereCenter, lastSphereRadius, lastSphereKeyframes);
+            controller.sphereCenter = lastSphereCenter;
+            controller.sphereRadius = lastSphereRadius;
+            controller.fps = lastSphereKeyframes;
+            controller.GenerateSphericalKeyframes();
             EditorUtility.SetDirty(controller);
             SceneView.RepaintAll();
         }
@@ -118,6 +121,8 @@ public class CameraPathEditor : Editor
         EditorGUILayout.BeginVertical("box");
         GUILayout.Label("🌍 Multi-Path Visualization", EditorStyles.boldLabel);
         controller.jsonFolderPath = EditorGUILayout.TextField("JSON Folder Path", controller.jsonFolderPath);
+        controller.showMultiPaths = EditorGUILayout.Toggle("Show Multi Paths", controller.showMultiPaths);
+        controller.showMultiPathLinesOnly = EditorGUILayout.Toggle("Lines Only (No Keyframes)", controller.showMultiPathLinesOnly);
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("📂 Load and Draw All Paths", buttonStyle))
         {
